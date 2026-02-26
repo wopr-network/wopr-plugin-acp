@@ -16,6 +16,7 @@ function createMockContext(): WOPRPluginContext {
     getSessions: vi.fn().mockReturnValue(["main"]),
     getMainConfig: vi.fn().mockReturnValue({}),
     registerExtension: vi.fn(),
+    unregisterExtension: vi.fn(),
   } as unknown as WOPRPluginContext;
 }
 
@@ -24,6 +25,35 @@ describe("plugin", () => {
     expect(plugin.name).toBe("wopr-plugin-acp");
     expect(plugin.version).toBe("1.0.0");
     expect(plugin.description).toBeDefined();
+  });
+
+  it("has a complete manifest with required fields", () => {
+    expect(plugin.manifest).toBeDefined();
+    expect(plugin.manifest?.capabilities).toBeDefined();
+    expect(plugin.manifest?.category).toBeDefined();
+    expect(plugin.manifest?.tags).toBeDefined();
+    expect(plugin.manifest?.icon).toBeDefined();
+    expect(plugin.manifest?.requires).toBeDefined();
+    expect(plugin.manifest?.provides).toBeDefined();
+    expect(plugin.manifest?.lifecycle).toBeDefined();
+    // configSchema is optional for plugins with no user-configurable settings
+  });
+
+  it("shutdown unregisters the acp:server extension", async () => {
+    const ctx = createMockContext();
+    await plugin.init(ctx);
+    await plugin.shutdown();
+    expect(ctx.unregisterExtension).toHaveBeenCalledWith("acp:server");
+  });
+
+  it("shutdown sets ctx to null (safe double-shutdown after unregister)", async () => {
+    const ctx = createMockContext();
+    await plugin.init(ctx);
+    await plugin.shutdown();
+    // Double-shutdown should not call unregisterExtension again
+    const ctx2 = createMockContext();
+    await plugin.shutdown();
+    expect(ctx2.unregisterExtension).not.toHaveBeenCalled();
   });
 
   it("initializes and registers ACP server extension", async () => {

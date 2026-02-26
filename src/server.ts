@@ -99,12 +99,8 @@ export class AcpServer {
     this.defaultSession = options.defaultSession ?? "acp";
     this.input = options.input ?? process.stdin;
     this.output = options.output ?? process.stdout;
-    this.log = options.logger ?? {
-      info: console.log,
-      warn: console.warn,
-      error: console.error,
-      debug: () => {},
-    };
+    // biome-ignore lint/suspicious/noConsole: fallback logger when no logger is provided
+    this.log = options.logger ?? { info: console.log, warn: console.warn, error: console.error, debug: () => {} };
   }
 
   /**

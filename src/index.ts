@@ -10,13 +10,29 @@ import type { WOPRPlugin, WOPRPluginContext } from "@wopr-network/plugin-types";
 import { AcpServer, type AcpSessionBridge } from "./server.js";
 
 let acpServer: AcpServer | null = null;
+let pluginCtx: WOPRPluginContext | null = null;
+const cleanups: Array<() => void> = [];
 
 const plugin: WOPRPlugin = {
   name: "wopr-plugin-acp",
   version: "1.0.0",
   description: "ACP IDE integration — Zed and VS Code via NDJSON stdio",
+  manifest: {
+    name: "wopr-plugin-acp",
+    version: "1.0.0",
+    description: "ACP IDE integration — Zed and VS Code via NDJSON stdio",
+    capabilities: ["ide-integration"],
+    category: "integration",
+    tags: ["acp", "ide", "zed", "vscode", "ndjson", "stdio"],
+    icon: "terminal",
+    requires: {},
+    provides: { capabilities: [] },
+    lifecycle: { shutdownBehavior: "graceful" },
+  },
 
   async init(ctx: WOPRPluginContext) {
+    pluginCtx = ctx;
+
     // Build the session bridge that routes ACP requests through the plugin context
     const bridge: AcpSessionBridge = {
       async inject(session, message, options) {
@@ -57,6 +73,13 @@ const plugin: WOPRPlugin = {
     if (acpServer) {
       acpServer.close();
       acpServer = null;
+    }
+    if (pluginCtx) {
+      pluginCtx.unregisterExtension?.("acp:server");
+      pluginCtx = null;
+    }
+    for (const fn of cleanups.splice(0)) {
+      fn();
     }
   },
 };
